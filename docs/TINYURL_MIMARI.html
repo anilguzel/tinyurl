@@ -180,7 +180,7 @@ td code,th code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-
 <div class="topbar">
   <span class="pill">Kapsam: <b>MVP</b></span>
   <span class="pill">On-prem Kubernetes · DMS hattı</span>
-  <span class="pill">⭐ Director yürüyüş yolu</span>
+  <span class="pill">⭐ Önerilen okuma yolu</span>
   <span style="margin-left:auto">Offline · tek dosya · CDN yok</span>
 </div>
 
@@ -571,7 +571,7 @@ td code,th code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-
 <!-- ============ 7. CACHING KARARI ============ -->
 <section class="doc" id="caching">
 <h2 class="s"><span class="num">07 ⭐</span> Caching Kararı — Varnish vs Redis</h2>
-<p class="lead">Director'ın doğrudan sorduğu soru: <b>"Varnish gerekir mi, API seviyesinde Redis mi uygun olur?"</b> Kısa cevap: <b>MVP için Redis yeterli, Varnish gereksiz.</b> Gerekçesi aşağıda.</p>
+<p class="lead">Temel mimari soru: <b>"Varnish gerekir mi, API seviyesinde Redis mi uygun olur?"</b> Kısa cevap: <b>MVP için Redis yeterli, Varnish gereksiz.</b> Gerekçesi aşağıda.</p>
 
 <h3 class="ss">İki aracın doğası farklı</h3>
 <table>
@@ -834,7 +834,7 @@ td code,th code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-
 </table>
 
 <div class="call design">
-  <div class="ct">◆ Director için tek cümlelik özet</div>
+  <div class="ct">◆ Tek cümlelik özet</div>
   <p>İş yükü gerçekte düşük-hacimli ve patlamalı olduğundan, <b>sade ve doğru ölçeklenen</b> bir mimari (SQL + Redis + 2-3 .NET pod, OWASP WAF arkasında) hem maliyeti düşük tutar hem de büyümeye hazırdır; Varnish/CDN gibi katmanlar net eşikler aşılınca eklenmek üzere bilinçle ertelenmiştir.</p>
 </div>
 </section>
