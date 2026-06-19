@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TinyURL Servisi — Mimari & Karar Dokümanı</title>
+<style>
+:root{
+  --bg:#0f1419; --panel:#161b22; --panel2:#1c232c; --ink:#e6edf3; --muted:#9aa7b4;
+  --line:#2a323d; --accent:#4f9cf5; --accent2:#7c5cff; --green:#3fb950; --amber:#d29922;
+  --red:#f85149; --code-bg:#0b0f14; --code-ink:#d6dee8; --kw:#ff7b72; --str:#a5d6ff;
+  --com:#7d8896; --num:#79c0ff; --sidebar-w:320px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ---- Layout ---- */
+.shell{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar-w);flex:0 0 var(--sidebar-w);position:sticky;top:0;height:100vh;
+  overflow-y:auto;background:var(--panel);border-right:1px solid var(--line);padding:0}
+.sidebar::-webkit-scrollbar{width:9px}
+.sidebar::-webkit-scrollbar-thumb{background:#2c3641;border-radius:6px}
+.brand{padding:18px 18px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;
+  background:var(--panel);z-index:5}
+.brand h1{font-size:16px;margin:0 0 3px;letter-spacing:.3px}
+.brand .sub{font-size:11.5px;color:var(--muted);letter-spacing:.4px}
+.filterbox{padding:10px 14px;border-bottom:1px solid var(--line);position:sticky;top:64px;
+  background:var(--panel);z-index:4}
+.filterbox input{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+  color:var(--ink);padding:7px 10px;font-size:13px;outline:none}
+.filterbox input:focus{border-color:var(--accent)}
+nav.toc{padding:8px 8px 60px}
+nav.toc .grp{margin-bottom:2px}
+nav.toc .grp>.gh{display:flex;align-items:center;gap:6px;cursor:pointer;padding:7px 10px;
+  border-radius:7px;font-size:12px;font-weight:600;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.6px;user-select:none}
+nav.toc .grp>.gh:hover{background:var(--panel2);color:var(--ink)}
+nav.toc .grp>.gh .tw{transition:transform .18s;font-size:10px;opacity:.7}
+nav.toc .grp.collapsed>.gh .tw{transform:rotate(-90deg)}
+nav.toc .grp.collapsed>.items{display:none}
+nav.toc .items{padding:2px 0 6px 8px}
+nav.toc a{display:block;padding:5px 12px;border-radius:6px;font-size:13px;color:var(--muted);
+  border-left:2px solid transparent;line-height:1.35}
+nav.toc a:hover{background:var(--panel2);color:var(--ink);text-decoration:none}
+nav.toc a.active{color:var(--ink);background:rgba(79,156,245,.12);border-left-color:var(--accent);
+  font-weight:600}
+nav.toc a.nohit{display:none}
+nav.toc .grp.nofilter{display:none}
+.star{color:var(--amber)}
+
+/* ---- Content ---- */
+.content{flex:1;min-width:0;max-width:1180px;margin:0 auto;padding:40px 54px 120px}
+section.doc{scroll-margin-top:14px;margin-bottom:14px;border-bottom:1px solid transparent;padding-bottom:6px}
+h2.s{font-size:27px;margin:46px 0 6px;padding-top:8px;letter-spacing:.2px;
+  display:flex;align-items:center;gap:11px}
+h2.s .num{font-size:14px;color:var(--accent);font-weight:700;background:rgba(79,156,245,.1);
+  padding:3px 10px;border-radius:20px;letter-spacing:.5px}
+h3.ss{font-size:19px;margin:30px 0 8px;color:#cdd9e5}
+h4.sss{font-size:15.5px;margin:20px 0 6px;color:#b8c4d0;letter-spacing:.2px}
+p{margin:10px 0}
+.lead{font-size:16px;color:#c7d2dc}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+hr.div{border:none;border-top:1px solid var(--line);margin:40px 0}
+
+/* collapsible content blocks */
+.collapse{border:1px solid var(--line);border-radius:11px;margin:16px 0;overflow:hidden;
+  background:var(--panel)}
+.collapse>.ch{display:flex;align-items:center;gap:9px;cursor:pointer;padding:12px 16px;
+  font-weight:600;font-size:14.5px;user-select:none;background:var(--panel2)}
+.collapse>.ch:hover{background:#222a34}
+.collapse>.ch .tw{font-size:11px;opacity:.65;transition:transform .18s}
+.collapse.closed>.ch .tw{transform:rotate(-90deg)}
+.collapse>.cb{padding:4px 18px 14px}
+.collapse.closed>.cb{display:none}
+
+/* callouts */
+.call{border-radius:11px;padding:14px 16px 14px 16px;margin:16px 0;border:1px solid;
+  border-left-width:4px;font-size:14px}
+.call .ct{font-weight:700;font-size:12.5px;letter-spacing:.5px;text-transform:uppercase;
+  margin-bottom:5px;display:flex;align-items:center;gap:7px}
+.call p{margin:5px 0}
+.call.swap{background:rgba(124,92,255,.07);border-color:var(--accent2)}
+.call.swap .ct{color:#b9a6ff}
+.call.design{background:rgba(63,185,80,.06);border-color:var(--green)}
+.call.design .ct{color:#56d364}
+.call.perf{background:rgba(210,153,34,.07);border-color:var(--amber)}
+.call.perf .ct{color:#e3b341}
+.call.risk{background:rgba(248,81,73,.07);border-color:var(--red)}
+.call.risk .ct{color:#ff7b72}
+.call.code{background:rgba(79,156,245,.05);border-color:var(--accent)}
+.call.code .ct{color:#79c0ff}
+
+/* code */
+pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:0;
+  margin:14px 0;overflow:auto;position:relative}
+pre .lang{position:absolute;top:0;right:0;font-size:10.5px;font-weight:700;letter-spacing:.6px;
+  color:var(--muted);background:var(--panel2);padding:3px 9px;border-radius:0 9px 0 8px;
+  border-left:1px solid var(--line);border-bottom:1px solid var(--line)}
+pre code{display:block;padding:16px 16px 14px;font-family:"SF Mono",Menlo,Consolas,monospace;
+  font-size:12.7px;line-height:1.55;color:var(--code-ink);white-space:pre}
+code.inl{background:var(--panel2);padding:1.5px 6px;border-radius:5px;font-size:12.6px;
+  font-family:"SF Mono",Menlo,Consolas,monospace;color:#e6c07b;border:1px solid var(--line)}
+.tok-kw{color:var(--kw)}.tok-str{color:var(--str)}.tok-com{color:var(--com);font-style:italic}
+.tok-num{color:var(--num)}.tok-typ{color:#ffa657}
+
+/* tables */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13.3px;
+  border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th{background:var(--panel2);text-align:left;padding:9px 12px;font-size:12px;letter-spacing:.4px;
+  text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.014)}
+td code,th code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:11.8px;
+  font-family:"SF Mono",Menlo,monospace;color:#e6c07b}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:10px;
+  letter-spacing:.3px}
+.tag.ok{background:rgba(63,185,80,.16);color:#56d364}
+.tag.warn{background:rgba(210,153,34,.16);color:#e3b341}
+.tag.bad{background:rgba(248,81,73,.16);color:#ff7b72}
+.tag.net{background:rgba(124,92,255,.16);color:#b9a6ff}
+.tag.anon{background:rgba(154,167,180,.16);color:#c7d2dc}
+
+/* diagrams */
+.diagram{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;
+  margin:18px 0;overflow-x:auto}
+.diagram svg{display:block;margin:0 auto;max-width:100%}
+.diagram .cap{text-align:center;color:var(--muted);font-size:12px;margin-top:12px}
+.lgnd{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:12px;
+  justify-content:center}
+.lgnd span{display:inline-flex;align-items:center;gap:5px}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+.kvmeta{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.kvmeta .kv{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px 13px;
+  font-size:12.5px}
+.kvmeta .kv b{color:#cdd9e5}
+.metrics{display:flex;gap:14px;flex-wrap:wrap;margin:18px 0}
+.metric{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);
+  border-radius:11px;padding:14px 16px}
+.metric .mv{font-size:26px;font-weight:800;color:var(--accent);letter-spacing:.3px}
+.metric .ml{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4}
+.metric.g .mv{color:var(--green)}
+.metric.a .mv{color:var(--amber)}
+.metric.p .mv{color:var(--accent2)}
+.hidden{display:none!important}
+.topbar{position:sticky;top:0;z-index:20;background:rgba(15,20,25,.86);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);padding:9px 54px;display:flex;align-items:center;
+  gap:16px;font-size:12.5px;color:var(--muted)}
+.topbar .pill{background:var(--panel2);border:1px solid var(--line);padding:3px 11px;border-radius:14px}
+.scrollspy-prog{position:fixed;top:0;left:var(--sidebar-w);height:3px;background:var(--accent);
+  z-index:50;transition:width .1s}
+@media(max-width:1100px){
+  .content{padding:28px 22px 100px}
+  .topbar{padding:9px 22px}
+}
+@media print{.sidebar,.topbar,.scrollspy-prog{display:none}.content{max-width:none}}
+</style>
+</head>
+<body>
+<div class="scrollspy-prog" id="prog"></div>
+<div class="shell">
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <h1>TinyURL Servisi — Mimari Dokümanı</h1>
+    <div class="sub">.NET 8 · Clean/CQRS · On-prem K8s · Redis · SQL Server</div>
+  </div>
+  <div class="filterbox">
+    <input id="tocfilter" type="text" placeholder="Başlık filtrele (örn. redis, waf, base62)…" autocomplete="off">
+  </div>
+  <nav class="toc" id="toc"><!--TOC injected by JS--></nav>
+</aside>
+<main class="content" id="main">
+<div class="topbar">
+  <span class="pill">Kapsam: <b>MVP</b></span>
+  <span class="pill">On-prem Kubernetes · DMS hattı</span>
+  <span class="pill">⭐ Director yürüyüş yolu</span>
+  <span style="margin-left:auto">Offline · tek dosya · CDN yok</span>
+</div>
+
+<!-- ============ 1. YÖNETİCİ ÖZETİ ============ -->
+<section class="doc" id="ozet">
+<h2 class="s"><span class="num">01 ⭐</span> Yönetici Özeti</h2>
+<p class="lead">Kurumsal ölçekte bir <b>URL kısaltma servisi</b> (TinyURL). Uzun bir hedef URL'yi kısa, paylaşılabilir bir bağlantıya çevirir; bağlantıya tıklanınca kullanıcıyı asıl adrese yönlendirir (redirect). MVP kapsamında DMS API ile <b>aynı altyapı hattında</b> (on-prem Kubernetes) konumlanır.</p>
+
+<div class="metrics">
+  <div class="metric g"><div class="mv">&lt;5 ms</div><div class="ml">Redirect p99 (Redis cache hit)</div></div>
+  <div class="metric"><div class="mv">~3.5 T</div><div class="ml">7 karakterlik Base62 adres uzayı</div></div>
+  <div class="metric a"><div class="mv">2–3</div><div class="ml">API pod (kapasite değil, yüksek erişilebilirlik için)</div></div>
+  <div class="metric p"><div class="mv">Redis</div><div class="ml">Birincil cache — Varnish MVP'de gereksiz</div></div>
+</div>
+
+<div class="call design">
+  <div class="ct">◆ Tasarım Tezi</div>
+  <p>İş yükü <b>okuma-ağırlıklı</b> ve <b>patlamalı (bursty)</b> ama <b>düşük mutlak hacimli</b>. "3.000 eş zamanlı SMS" senaryosu kulağa yüksek gelir; fakat SMS teslimi + insan tepki süresi tıklamaları dakikalara/saatlere yayar. <b>Gerçek pik redirect RPS'i birkaç yüz seviyesindedir.</b> Bu nedenle mimari karmaşıklığı değil <b>sadeliği</b> ödüllendirir: SQL Server (kaynak) + Redis (cache + sayaç) + 2–3 stateless .NET pod, OWASP CRS WAF arkasında. Varnish/CDN gibi katmanlar bilinçli olarak <b>Faz-2'ye</b> ertelenir.</p>
+</div>
+
+<h3 class="ss">MVP'de neyi kapsıyoruz, neyi kapsamıyoruz</h3>
+<table>
+<thead><tr><th>Kapsam içi (MVP)</th><th>Kapsam dışı (Faz-2+)</th></tr></thead>
+<tbody>
+<tr><td>Kısa link üretimi (DB sequence → Base62)</td><td>Multi-tenant izolasyon (DMS modeli)</td></tr>
+<tr><td>Custom alias + rezerve kelime yönetişimi</td><td>İnsan kullanıcı paneli / self-service UI</td></tr>
+<tr><td>302 redirect + asenkron tıklama analitiği</td><td>Varnish / CDN edge cache</td></tr>
+<tr><td>Redis cache + atomik sayaç</td><td>Coğrafi çok-bölgeli (multi-region) dağıtım</td></tr>
+<tr><td>WAF + API Gateway + rate limit</td><td>A/B yönlendirme, akıllı (cihaz bazlı) redirect</td></tr>
+<tr><td>Open-redirect / SSRF koruması</td><td>QR kod üretimi, link önizleme (unfurl)</td></tr>
+<tr><td>TTL'li linkler + purge</td><td>Gerçek zamanlı analitik dashboard</td></tr>
+</tbody>
+</table>
+
+<div class="call code">
+  <div class="ct">▸ Bir bakışta bileşenler</div>
+  <p><b>Edge:</b> NGINX Ingress + ModSecurity (OWASP CRS) WAF → <b>Gateway:</b> rate limit + auth → <b>API:</b> .NET 8 Clean/CQRS (Create + Redirect) → <b>Veri:</b> SQL Server (kaynak doğrusu) + Redis (cache + INCR) → <b>Analitik:</b> asenkron kuyruk → tıklama deposu.</p>
+</div>
+</section>
+
+<!-- ============ 2. GEREKSİNİMLER & TRAFİK ============ -->
+<section class="doc" id="gereksinimler">
+<h2 class="s"><span class="num">02 ⭐</span> Gereksinimler & Trafik Profili</h2>
+<p class="lead">Mimarinin tek bir metriğe dayandırılması istendi: <b>aynı anda ~3.000 alıcıya gönderilen SMS bildirimi.</b> Bu bölüm o metriği gerçek bir yük profiline çevirir — çünkü doğru mimari kararı "kaç SMS gönderildiği" değil, "<b>saniyede kaç redirect</b> sunmamız gerektiği" belirler.</p>
+
+<h3 class="ss">Fonksiyonel gereksinimler</h3>
+<ul>
+<li><b>Kısalt:</b> uzun URL → kısa link. İki yol: (1) sistemin ürettiği kısa kimlik, (2) kullanıcının verdiği custom alias.</li>
+<li><b>Yönlendir:</b> kısa linke gelen isteği 302 ile hedefe yönlendir.</li>
+<li><b>Kategorize et:</b> üretilen linkler <code class="inl">/s/{id}</code>, custom alias'lar <code class="inl">/{alias}</code> namespace'inde (bkz. §03).</li>
+<li><b>Ölç:</b> her tıklamayı say ve (asenkron) zaman/cihaz/coğrafya ile zenginleştir.</li>
+<li><b>Süre yönet:</b> kampanya linkleri TTL ile expire olur, eskiler purge edilir.</li>
+</ul>
+
+<h3 class="ss">Fonksiyonel olmayan gereksinimler</h3>
+<table>
+<thead><tr><th>Boyut</th><th>Hedef (MVP)</th><th>Gerekçe</th></tr></thead>
+<tbody>
+<tr><td>Redirect gecikme</td><td>p99 &lt; 20 ms (cache hit &lt; 5 ms)</td><td>Kullanıcı tıkladıktan sonra anında yönlenmeli</td></tr>
+<tr><td>Erişilebilirlik</td><td>%99.9</td><td>Kampanya anında link ölürse itibar kaybı</td></tr>
+<tr><td>Dayanıklılık</td><td>Link kaybı = 0</td><td>SQL Server kaynak doğrusu; Redis sadece cache</td></tr>
+<tr><td>Tutarlılık</td><td>Create sonrası okuma (read-your-write)</td><td>Yeni link hemen çalışmalı</td></tr>
+<tr><td>Analitik</td><td>Eventual (≈saniyeler)</td><td>Tıklama sayımı redirect'i yavaşlatmamalı</td></tr>
+</tbody>
+</table>
+
+<h3 class="ss">"3.000 SMS" gerçekte ne kadar RPS?</h3>
+<p>Anahtar içgörü: <b>SMS gönderimi anlık olsa bile tıklamalar anlık değildir.</b> Üç doğal yayılma faktörü işin hacmini düşürür:</p>
+<ol>
+<li><b>Teslim gecikmesi:</b> Operatör/SMS sağlayıcı throttling'i mesajları saniyeler–dakikalar içinde dağıtır.</li>
+<li><b>İnsan tepki süresi:</b> Telefonu görme, okuma, tıklama kararı — saniyelerden saatlere yayılır.</li>
+<li><b>Tıklama oranı (CTR):</b> SMS için yüksek olsa bile (~%20–35), alıcıların hepsi tıklamaz.</li>
+</ol>
+
+<div class="diagram">
+<svg viewBox="0 0 760 280" width="760" height="280" font-family="-apple-system,Segoe UI,sans-serif">
+  <!-- axes -->
+  <line x1="60" y1="230" x2="720" y2="230" stroke="#2a323d" stroke-width="1.5"/>
+  <line x1="60" y1="30" x2="60" y2="230" stroke="#2a323d" stroke-width="1.5"/>
+  <text x="390" y="265" fill="#9aa7b4" font-size="12" text-anchor="middle">Zaman (SMS gönderiminden sonra)</text>
+  <text x="20" y="130" fill="#9aa7b4" font-size="12" transform="rotate(-90 20 130)" text-anchor="middle">Tıklama / dk</text>
+  <!-- naive spike (red, dashed) -->
+  <polyline points="60,230 70,40 80,230" fill="none" stroke="#f85149" stroke-width="2" stroke-dasharray="4 3"/>
+  <text x="95" y="48" fill="#f85149" font-size="11">Yanlış varsayım: 3.000 anlık</text>
+  <!-- realistic curve (green) -->
+  <path d="M60,230 C120,210 150,90 220,90 C300,90 360,150 460,185 C560,210 640,224 720,228"
+        fill="none" stroke="#3fb950" stroke-width="2.5"/>
+  <text x="230" y="80" fill="#3fb950" font-size="11">Gerçekçi: log-normal yayılım</text>
+  <!-- peak marker -->
+  <circle cx="220" cy="90" r="4" fill="#3fb950"/>
+  <line x1="220" y1="90" x2="220" y2="230" stroke="#3fb950" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>
+  <text x="220" y="105" fill="#56d364" font-size="11" text-anchor="middle">pik ≈ 5. dk</text>
+  <!-- x ticks -->
+  <text x="60" y="248" fill="#7d8896" font-size="10" text-anchor="middle">0</text>
+  <text x="220" y="248" fill="#7d8896" font-size="10" text-anchor="middle">5 dk</text>
+  <text x="460" y="248" fill="#7d8896" font-size="10" text-anchor="middle">30 dk</text>
+  <text x="700" y="248" fill="#7d8896" font-size="10" text-anchor="middle">2+ sa</text>
+</svg>
+<div class="cap">Tıklamalar bir spike değil, sağa kuyruklu bir dağılım çizer. Asıl tasarım kısıtı bu eğrinin tepesidir.</div>
+</div>
+
+<h4 class="sss">Senaryo hesabı (muhafazakâr → patolojik)</h4>
+<table>
+<thead><tr><th>Senaryo</th><th>Varsayım</th><th>Pik redirect RPS</th><th>Sonuç</th></tr></thead>
+<tbody>
+<tr><td>Gerçekçi</td><td>3.000 × %30 CTR = 900 tık, 30 dk'ya yayılır, pik ×10 ortalama</td><td><b>≈ 5–50 RPS</b></td><td><span class="tag ok">Tek pod fazlasıyla yeter</span></td></tr>
+<tr><td>Agresif</td><td>3.000 × %50 = 1.500 tık, ilk 5 dk'da %50'si</td><td><b>≈ 50–150 RPS</b></td><td><span class="tag ok">2 pod + Redis rahat</span></td></tr>
+<tr><td>Patolojik</td><td>3.000 alıcının tamamı aynı saniyede tıklar</td><td><b>3.000 RPS (1 sn)</b></td><td><span class="tag warn">Yine de Redis-cache'li redirect için kolay</span></td></tr>
+</tbody>
+</table>
+
+<div class="call perf">
+  <div class="ct">⚡ Kapasite kıyası</div>
+  <p>Gövdesiz bir 302 redirect + Redis lookup, tek bir .NET 8 pod'da rahatça <b>5.000–10.000 RPS</b> sunar (saf bellek-içi anahtar araması, disk/IO yok). Yani <b>en kötü patolojik senaryo (3.000 RPS) bile</b> tek pod kapasitesinin altındadır. 2–3 pod tutmamızın sebebi <b>kapasite değil</b>, rolling deploy ve node arızasında kesintisizliktir (yüksek erişilebilirlik).</p>
+</div>
+
+<div class="call swap">
+  <div class="ct">◇ Çıkarım — neden Varnish'e gerek yok</div>
+  <p>Varnish/CDN gibi bir HTTP edge cache katmanı, ancak <b>sürekli on binlerce RPS</b> veya <b>global coğrafi gecikme</b> sorununda anlamlıdır. Bizim profilimiz dakikada birkaç bin tıklamayı geçmez ve tek bölgededir. Redis bu yükü mikrosaniyelerle karşılar; araya Varnish koymak <b>operasyonel yük + cache invalidation karmaşıklığı</b> getirir, ölçülebilir bir kazanç getirmez. Eşik aşılırsa (§12) eklenir. Detaylı karşılaştırma §07'de.</p>
+</div>
+</section>
+
+<!-- ============ 3. KISA URL TASARIMI ============ -->
+<section class="doc" id="kisa-url">
+<h2 class="s"><span class="num">03 ⭐</span> Kısa URL Tasarımı</h2>
+<p class="lead">İki temel soru: <b>(1)</b> kısa kimlik nasıl üretilir, <b>(2)</b> üretilen linkler ile custom alias'lar nasıl ayrıştırılır. Her ikisi için de endüstri best-practice'i benimsiyoruz.</p>
+
+<h3 class="ss">Kimlik üretimi — DB sequence → Base62</h3>
+<p>Link kimlikleri <b>veritabanından</b> üretilir (mevcut yaklaşım). Monoton artan bir DB <code class="inl">BIGINT</code> identity/sequence değeri alınır, <b>Base62</b> ile kodlanır. Base62 alfabesi <code class="inl">[0-9 a-z A-Z]</code> = 62 karakter; URL-güvenli, ayraç gerektirmez.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 760 210" width="760" height="210" font-family="-apple-system,Segoe UI,sans-serif">
+  <defs><marker id="ar3" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+    <path d="M0,0 L7,3.2 L0,6.4 Z" fill="#4f9cf5"/></marker></defs>
+  <!-- step boxes -->
+  <rect x="20" y="70" width="150" height="62" rx="9" fill="#1c232c" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="95" y="95" fill="#cdd9e5" font-size="13" font-weight="700" text-anchor="middle">DB Sequence</text>
+  <text x="95" y="114" fill="#9aa7b4" font-size="11" text-anchor="middle">128,000,001</text>
+
+  <rect x="215" y="70" width="160" height="62" rx="9" fill="#1c232c" stroke="#7c5cff" stroke-width="1.5"/>
+  <text x="295" y="92" fill="#cdd9e5" font-size="13" font-weight="700" text-anchor="middle">Feistel Karıştır</text>
+  <text x="295" y="110" fill="#9aa7b4" font-size="10.5" text-anchor="middle">sıralı tahmini önler</text>
+  <text x="295" y="124" fill="#9aa7b4" font-size="11" text-anchor="middle">→ 947,113,882</text>
+
+  <rect x="420" y="70" width="150" height="62" rx="9" fill="#1c232c" stroke="#4f9cf5" stroke-width="1.5"/>
+  <text x="495" y="95" fill="#cdd9e5" font-size="13" font-weight="700" text-anchor="middle">Base62 Kodla</text>
+  <text x="495" y="114" fill="#9aa7b4" font-size="11" text-anchor="middle">→ "16Axb2"</text>
+
+  <rect x="615" y="70" width="130" height="62" rx="9" fill="#1c232c" stroke="#d29922" stroke-width="1.5"/>
+  <text x="680" y="95" fill="#cdd9e5" font-size="13" font-weight="700" text-anchor="middle">Kısa Link</text>
+  <text x="680" y="114" fill="#e3b341" font-size="11" text-anchor="middle">/s/16Axb2</text>
+
+  <line x1="170" y1="101" x2="210" y2="101" stroke="#4f9cf5" stroke-width="2" marker-end="url(#ar3)"/>
+  <line x1="375" y1="101" x2="415" y2="101" stroke="#4f9cf5" stroke-width="2" marker-end="url(#ar3)"/>
+  <line x1="570" y1="101" x2="610" y2="101" stroke="#4f9cf5" stroke-width="2" marker-end="url(#ar3)"/>
+</svg>
+<div class="cap">Çakışmasız üretim: sequence benzersizliği garanti eder; Feistel sırayı gizler; Base62 kısaltır.</div>
+</div>
+
+<div class="call design">
+  <div class="ct">◆ Neden bu yaklaşım (rastgele ID veya hash yerine)</div>
+  <p><b>Çakışma yok:</b> DB sequence doğası gereği benzersiz — rastgele üretimdeki "çakışma kontrolü + yeniden dene" döngüsüne hiç gerek kalmaz. <b>Kısa:</b> 7 karakter Base62 ≈ <b>3.5 trilyon</b> adres (62⁷); MVP için onlarca yıl yeter. <b>Tahmin edilemez:</b> Çıplak sequence sıralı olur (<code class="inl">/s/16Axb2</code> → <code class="inl">/s/16Axb3</code>) ve rakipler linkleri tarayabilir. Araya hafif bir <b>Feistel cipher</b> koyarak tam-tersine-çevrilebilir ama sırasız bir eşleme elde ederiz — ekstra DB sütunu olmadan.</p>
+</div>
+
+<div class="call risk">
+  <div class="ct">⚠ Kaçınılan tuzak — kriptografik hash kısaltma</div>
+  <p>"URL'nin SHA-256'sını al, ilk 7 karakterini kullan" cazip görünür ama <b>çakışma kaçınılmazdır</b> (doğum günü paradoksu) ve çakışınca hangi URL'nin kazandığı belirsizleşir. Ayrıca aynı URL'yi iki kez kısaltan iki farklı kampanya istemeden aynı linki paylaşır — analitik karışır. Sequence + Feistel bu sınıf hataların tamamını eler.</p>
+</div>
+
+<h3 class="ss">Route taksonomisi — üretilen vs custom</h3>
+<p>İki link tipi <b>ayrı namespace</b>'lerde tutulur; bu, çakışmayı imkânsız kılar ve loglarda/WAF kurallarında tipi anında ayırt etmeyi sağlar:</p>
+<table>
+<thead><tr><th>Tip</th><th>Biçim</th><th>Örnek</th><th>Kim üretir</th></tr></thead>
+<tbody>
+<tr><td>Üretilen</td><td><code>/s/{base62}</code></td><td><code>abc.com/s/16Axb2</code></td><td>Sistem (sequence)</td></tr>
+<tr><td>Custom alias</td><td><code>/{alias}</code></td><td><code>abc.com/kampanya-2026</code></td><td>Çağıran servis seçer</td></tr>
+</tbody>
+</table>
+
+<div class="call code">
+  <div class="ct">▸ Neden iki ayrı prefix — best practice gerekçesi</div>
+  <p><code class="inl">/s/</code> prefix'i üretilen linkleri <b>kapalı bir namespace</b>'e hapseder: bu alfanümerik tokenlar asla kök path'lerle (<code class="inl">/health</code>, <code class="inl">/api</code>, <code class="inl">/kampanya-2026</code>) çakışmaz. Custom alias'lar kökte (<code class="inl">/{alias}</code>) durur çünkü <b>marka değeri</b> kısalıktadır (<code class="inl">abc.com/indirim</code> &gt; <code class="inl">abc.com/s/indirim</code>). Çakışmayı önlemek için custom alias'lar bir <b>rezerve kelime listesi</b>nden geçer (aşağıda).</p>
+</div>
+
+<h3 class="ss">Custom alias yönetişimi</h3>
+<ul>
+<li><b>Rezerve kelimeler:</b> <code class="inl">s</code>, <code class="inl">api</code>, <code class="inl">admin</code>, <code class="inl">health</code>, <code class="inl">metrics</code>, <code class="inl">static</code>, <code class="inl">.well-known</code> — sistem path'leriyle çakışmayı engeller.</li>
+<li><b>Blocklist:</b> küfür/marka-ihlali filtreleri; kurumsal itibar koruması.</li>
+<li><b>Biçim kuralı:</b> <code class="inl">^[a-z0-9](?:[a-z0-9-]{1,48}[a-z0-9])$</code> — küçük harf, tire, 3–50 karakter; büyük/küçük harf karışıklığını ve homograf saldırılarını azaltır.</li>
+<li><b>Çakışma politikası:</b> alias zaten varsa <code class="inl">409 Conflict</code>; "üzerine yazma" yok (link kararlılığı = güven).</li>
+<li><b>Benzersizlik:</b> DB'de alias üzerinde <code class="inl">UNIQUE</code> kısıt — yarış koşulunu veritabanı seviyesinde garanti eder.</li>
+</ul>
+</section>
+
+<!-- ============ 4. SİSTEM MİMARİSİ ============ -->
+<section class="doc" id="mimari">
+<h2 class="s"><span class="num">04 ⭐</span> Sistem Mimarisi</h2>
+<p class="lead">Stateless API katmanı, WAF + Gateway arkasında; durum SQL Server (kaynak) ve Redis (cache + sayaç) arasında bölünür; analitik asenkron kuyruğa yazılır. Tüm bileşenler on-prem Kubernetes'te, DMS API ile aynı küme/namespace ailesinde.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 820 470" width="820" height="470" font-family="-apple-system,Segoe UI,sans-serif">
+  <defs><marker id="ar4" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+    <path d="M0,0 L7,3.2 L0,6.4 Z" fill="#4f9cf5"/></marker></defs>
+
+  <!-- client -->
+  <rect x="330" y="14" width="160" height="44" rx="9" fill="#1c232c" stroke="#9aa7b4" stroke-width="1.5"/>
+  <text x="410" y="33" fill="#cdd9e5" font-size="13" font-weight="700" text-anchor="middle">İstemci / Tarayıcı</text>
+  <text x="410" y="49" fill="#9aa7b4" font-size="10.5" text-anchor="middle">SMS linkine tıklayan kullanıcı</text>
+
+  <!-- edge: ingress + WAF -->
+  <rect x="280" y="84" width="260" height="50" rx="9" fill="#1c232c" stroke="#f85149" stroke-width="1.5"/>
+  <text x="410" y="104" fill="#cdd9e5" font-size="13" font-weight="700" text-anchor="middle">NGINX Ingress + WAF</text>
+  <text x="410" y="121" fill="#ff7b72" font-size="10.5" text-anchor="middle">ModSecurity · OWASP CRS · TLS sonlandırma</text>
+
+  <!-- gateway -->
+  <rect x="280" y="160" width="260" height="50" rx="9" fill="#1c232c" stroke="#7c5cff" stroke-width="1.5"/>
+  <text x="410" y="180" fill="#cdd9e5" font-size="13" font-weight="700" text-anchor="middle">API Gateway</text>
+  <text x="410" y="197" fill="#b9a6ff" font-size="10.5" text-anchor="middle">rate limit · auth (create) · routing</text>
+
+  <!-- API pods -->
+  <rect x="250" y="240" width="150" height="60" rx="9" fill="#1c232c" stroke="#4f9cf5" stroke-width="1.5"/>
+  <text x="325" y="262" fill="#cdd9e5" font-size="12.5" font-weight="700" text-anchor="middle">Redirect API</text>
+  <text x="325" y="279" fill="#9aa7b4" font-size="10" text-anchor="middle">GET /s/{id}, /{alias}</text>
+  <text x="325" y="292" fill="#9aa7b4" font-size="10" text-anchor="middle">.NET 8 · ×2-3 pod</text>
+
+  <rect x="420" y="240" width="150" height="60" rx="9" fill="#1c232c" stroke="#4f9cf5" stroke-width="1.5"/>
+  <text x="495" y="262" fill="#cdd9e5" font-size="12.5" font-weight="700" text-anchor="middle">Create API</text>
+  <text x="495" y="279" fill="#9aa7b4" font-size="10" text-anchor="middle">POST /api/links</text>
+  <text x="495" y="292" fill="#9aa7b4" font-size="10" text-anchor="middle">CQRS Command</text>
+
+  <!-- data stores -->
+  <rect x="150" y="350" width="150" height="58" rx="9" fill="#1c232c" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="225" y="372" fill="#cdd9e5" font-size="12.5" font-weight="700" text-anchor="middle">Redis</text>
+  <text x="225" y="389" fill="#56d364" font-size="10" text-anchor="middle">cache + INCR sayaç</text>
+  <text x="225" y="401" fill="#9aa7b4" font-size="10" text-anchor="middle">birincil okuma yolu</text>
+
+  <rect x="335" y="350" width="150" height="58" rx="9" fill="#1c232c" stroke="#d29922" stroke-width="1.5"/>
+  <text x="410" y="372" fill="#cdd9e5" font-size="12.5" font-weight="700" text-anchor="middle">SQL Server</text>
+  <text x="410" y="389" fill="#e3b341" font-size="10" text-anchor="middle">kaynak doğrusu</text>
+  <text x="410" y="401" fill="#9aa7b4" font-size="10" text-anchor="middle">link + alias + sequence</text>
+
+  <rect x="520" y="350" width="160" height="58" rx="9" fill="#1c232c" stroke="#7c5cff" stroke-width="1.5"/>
+  <text x="600" y="368" fill="#cdd9e5" font-size="12.5" font-weight="700" text-anchor="middle">Analitik Kuyruğu</text>
+  <text x="600" y="385" fill="#b9a6ff" font-size="10" text-anchor="middle">async tıklama event'i</text>
+  <text x="600" y="398" fill="#9aa7b4" font-size="10" text-anchor="middle">→ tıklama deposu</text>
+
+  <!-- arrows -->
+  <line x1="410" y1="58" x2="410" y2="82" stroke="#4f9cf5" stroke-width="2" marker-end="url(#ar4)"/>
+  <line x1="410" y1="134" x2="410" y2="158" stroke="#4f9cf5" stroke-width="2" marker-end="url(#ar4)"/>
+  <line x1="360" y1="210" x2="330" y2="238" stroke="#4f9cf5" stroke-width="2" marker-end="url(#ar4)"/>
+  <line x1="460" y1="210" x2="490" y2="238" stroke="#4f9cf5" stroke-width="2" marker-end="url(#ar4)"/>
+  <!-- redirect to redis -->
+  <line x1="300" y1="300" x2="240" y2="348" stroke="#3fb950" stroke-width="2" marker-end="url(#ar4)"/>
+  <!-- redirect to queue (analytics) -->
+  <line x1="360" y1="300" x2="585" y2="348" stroke="#7c5cff" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#ar4)"/>
+  <!-- create to sql -->
+  <line x1="480" y1="300" x2="420" y2="348" stroke="#d29922" stroke-width="2" marker-end="url(#ar4)"/>
+  <!-- redis<->sql (cache miss fill) -->
+  <line x1="300" y1="379" x2="333" y2="379" stroke="#9aa7b4" stroke-width="1.4" stroke-dasharray="3 3" marker-end="url(#ar4)"/>
+  <text x="316" y="345" fill="#7d8896" font-size="9" text-anchor="middle">miss→fill</text>
+</svg>
+<div class="lgnd">
+  <span><span class="dot" style="background:#f85149"></span>Güvenlik kenarı</span>
+  <span><span class="dot" style="background:#7c5cff"></span>Gateway / async</span>
+  <span><span class="dot" style="background:#4f9cf5"></span>Uygulama</span>
+  <span><span class="dot" style="background:#3fb950"></span>Cache (sıcak yol)</span>
+  <span><span class="dot" style="background:#d29922"></span>Kalıcı depo</span>
+</div>
+</div>
+
+<h3 class="ss">Bileşen sorumlulukları</h3>
+<table>
+<thead><tr><th>Katman</th><th>Teknoloji</th><th>Sorumluluk</th></tr></thead>
+<tbody>
+<tr><td>Edge / WAF</td><td>NGINX Ingress + ModSecurity (OWASP CRS)</td><td>TLS, L7 filtreleme, kötü amaçlı istek elemesi, IP throttle</td></tr>
+<tr><td>Gateway</td><td>NGINX/Kong</td><td>Rate limit, create endpoint auth, path routing</td></tr>
+<tr><td>Redirect API</td><td>.NET 8 (CQRS Query)</td><td>Cache-first lookup, 302 dön, async analitik event yay</td></tr>
+<tr><td>Create API</td><td>.NET 8 (CQRS Command)</td><td>Doğrulama, sequence al, Feistel+Base62, persist, cache warm</td></tr>
+<tr><td>Redis</td><td>Redis</td><td>id/alias → hedef cache; atomik tıklama sayacı (INCR)</td></tr>
+<tr><td>SQL Server</td><td>EF Core</td><td>Link kaydı, alias unique kısıt, sequence, kaynak doğrusu</td></tr>
+<tr><td>Analitik</td><td>Kuyruk + worker</td><td>Tıklama event'lerini batch'leyip tıklama deposuna yazar</td></tr>
+</tbody>
+</table>
+
+<div class="call design">
+  <div class="ct">◆ Neden Redirect ve Create ayrı (CQRS)</div>
+  <p>İki yolun yük profili taban tabana zıt: <b>Redirect</b> okuma-ağırlıklı, gecikmeye duyarlı, gövdesiz (sadece 302 header); <b>Create</b> yazma-ağırlıklı, doğrulama-yoğun, seyrek. Ayrı tutmak her birini bağımsız ölçeklemeyi (redirect pod'larını ayrı HPA), farklı rate-limit ve auth politikası uygulamayı sağlar. DMS API'deki CQRS/MediatR deseni birebir yeniden kullanılır.</p>
+</div>
+</section>
+
+<!-- ============ 5. REDIRECT YOLU ============ -->
+<section class="doc" id="redirect-yolu">
+<h2 class="s"><span class="num">05 ⭐</span> Okuma Yolu — Redirect</h2>
+<p class="lead">Sistemin sıcak yolu: kısa linke gelen her isteği en kısa sürede hedefe yönlendirmek. Tasarım hedefi tek cümle: <b>cache hit'te disk/SQL'e hiç dokunma, gövde döndürme, analitiği yola çıkma.</b></p>
+
+<div class="diagram">
+<svg viewBox="0 0 800 360" width="800" height="360" font-family="-apple-system,Segoe UI,sans-serif">
+  <defs><marker id="ar5" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+    <path d="M0,0 L7,3.2 L0,6.4 Z" fill="#4f9cf5"/></marker></defs>
+  <!-- lanes -->
+  <text x="80" y="24" fill="#9aa7b4" font-size="11" text-anchor="middle" font-weight="700">İstemci</text>
+  <text x="250" y="24" fill="#9aa7b4" font-size="11" text-anchor="middle" font-weight="700">Redirect API</text>
+  <text x="430" y="24" fill="#56d364" font-size="11" text-anchor="middle" font-weight="700">Redis</text>
+  <text x="600" y="24" fill="#e3b341" font-size="11" text-anchor="middle" font-weight="700">SQL Server</text>
+  <text x="740" y="24" fill="#b9a6ff" font-size="11" text-anchor="middle" font-weight="700">Kuyruk</text>
+  <!-- lifelines -->
+  <line x1="80" y1="34" x2="80" y2="340" stroke="#2a323d"/>
+  <line x1="250" y1="34" x2="250" y2="340" stroke="#2a323d"/>
+  <line x1="430" y1="34" x2="430" y2="340" stroke="#2a323d"/>
+  <line x1="600" y1="34" x2="600" y2="340" stroke="#2a323d"/>
+  <line x1="740" y1="34" x2="740" y2="340" stroke="#2a323d"/>
+  <!-- 1 request -->
+  <line x1="80" y1="60" x2="248" y2="60" stroke="#4f9cf5" stroke-width="1.8" marker-end="url(#ar5)"/>
+  <text x="160" y="53" fill="#cdd9e5" font-size="10.5" text-anchor="middle">GET /s/16Axb2</text>
+  <!-- 2 cache lookup -->
+  <line x1="250" y1="90" x2="428" y2="90" stroke="#3fb950" stroke-width="1.8" marker-end="url(#ar5)"/>
+  <text x="338" y="83" fill="#9aa7b4" font-size="10.5" text-anchor="middle">GET link:16Axb2</text>
+  <!-- 3a hit -->
+  <line x1="430" y1="116" x2="252" y2="116" stroke="#3fb950" stroke-width="1.8" marker-end="url(#ar5)"/>
+  <text x="338" y="109" fill="#56d364" font-size="10.5" text-anchor="middle">HIT → hedef URL</text>
+  <!-- async incr -->
+  <line x1="250" y1="146" x2="428" y2="146" stroke="#7c5cff" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#ar5)"/>
+  <text x="338" y="139" fill="#b9a6ff" font-size="10" text-anchor="middle">INCR clicks (async)</text>
+  <!-- async event -->
+  <line x1="250" y1="172" x2="738" y2="172" stroke="#7c5cff" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#ar5)"/>
+  <text x="500" y="165" fill="#b9a6ff" font-size="10" text-anchor="middle">tıklama event'i (fire-and-forget)</text>
+  <!-- 4 302 -->
+  <line x1="248" y1="200" x2="82" y2="200" stroke="#4f9cf5" stroke-width="2" marker-end="url(#ar5)"/>
+  <text x="160" y="193" fill="#79c0ff" font-size="10.5" text-anchor="middle">302 Location: hedef</text>
+
+  <!-- miss path divider -->
+  <line x1="40" y1="226" x2="760" y2="226" stroke="#2a323d" stroke-dasharray="2 4"/>
+  <text x="400" y="244" fill="#7d8896" font-size="10" text-anchor="middle" font-style="italic">— cache MISS durumu (ilk tıklama / cache düşmüş) —</text>
+  <!-- miss to sql -->
+  <line x1="250" y1="266" x2="598" y2="266" stroke="#d29922" stroke-width="1.6" marker-end="url(#ar5)"/>
+  <text x="420" y="259" fill="#e3b341" font-size="10.5" text-anchor="middle">SELECT hedef WHERE id=…</text>
+  <!-- sql back + fill cache -->
+  <line x1="600" y1="294" x2="252" y2="294" stroke="#d29922" stroke-width="1.6" marker-end="url(#ar5)"/>
+  <text x="420" y="287" fill="#9aa7b4" font-size="10.5" text-anchor="middle">hedef + TTL</text>
+  <line x1="250" y1="320" x2="428" y2="320" stroke="#3fb950" stroke-width="1.6" stroke-dasharray="3 3" marker-end="url(#ar5)"/>
+  <text x="338" y="313" fill="#56d364" font-size="10" text-anchor="middle">SETEX cache doldur</text>
+</svg>
+<div class="cap">Mutlu yol (üst): yalnızca Redis. Miss yolu (alt): SQL'den oku, cache'i doldur — sonraki tüm tıklamalar tekrar sıcak.</div>
+</div>
+
+<h3 class="ss">Adım adım</h3>
+<ol>
+<li><b>Lookup:</b> <code class="inl">link:{id}</code> Redis'ten okunur. Hit ise (yaygın durum) tek round-trip.</li>
+<li><b>Doğrula:</b> link expire/pasif mi? Redis değeri durum bilgisini de taşır; expire ise <code class="inl">410 Gone</code>.</li>
+<li><b>Analitik (async):</b> <code class="inl">INCR clicks:{id}</code> + tıklama event'i kuyruğa <b>fire-and-forget</b> — redirect yanıtı bunları beklemez.</li>
+<li><b>Yönlendir:</b> <code class="inl">302 Found</code> + <code class="inl">Location</code> header. Gövde yok.</li>
+<li><b>Miss:</b> SQL'den oku, cache'i TTL ile doldur (<code class="inl">SETEX</code>), sonra yönlendir.</li>
+</ol>
+
+<div class="call perf">
+  <div class="ct">⚡ Neden 302, 301 değil</div>
+  <p><b>301 (kalıcı)</b> tarayıcı ve ara cache'lerce kalıcı saklanır → sonraki tıklamalar sunucuya <b>hiç gelmez</b> → tıklama sayamayız, linki güncelleyemez/iptal edemeyiz. <b>302 (geçici)</b> her tıklamayı sunucuya getirir → kampanya analitiği + iptal/güncelleme kontrolü bizde kalır. Maliyeti, her tıklamanın bir cache-hit lookup'ı olmasıdır; bu da mikrosaniyeler mertebesindedir. Kampanya ölçümü bu küçük maliyete fazlasıyla değer.</p>
+</div>
+
+<div class="call code">
+  <div class="ct">▸ Analitik neden asenkron</div>
+  <p>Tıklama sayımı ve event yazımı redirect yanıtının kritik yolunda <b>değildir</b>. Senkron yapılsaydı, analitik deposundaki bir yavaşlama doğrudan kullanıcının gördüğü redirect gecikmesine yansırdı. Fire-and-forget + kuyruk ile: (1) redirect daima hızlı, (2) analitik backend'i düşse bile yönlendirme çalışmaya devam eder (graceful degradation), (3) event'ler batch'lenerek tıklama deposuna verimli yazılır.</p>
+</div>
+</section>
+
+<!-- ============ 6. CREATE YOLU ============ -->
+<section class="doc" id="create-yolu">
+<h2 class="s"><span class="num">06</span> Yazma Yolu — Link Üretimi</h2>
+<p class="lead">Seyrek ama doğrulama-yoğun yol. Güvenliğin (open-redirect, SSRF) ilk savunma hattı buradadır — kötü bir hedef URL sisteme hiç girmemelidir.</p>
+
+<h3 class="ss">Akış</h3>
+<ol>
+<li><b>Auth:</b> Gateway, create endpoint'ini service-to-service kimlikle (API Key / mTLS) korur. Redirect yolu auth gerektirmez (herkese açık), create yolu gerektirir.</li>
+<li><b>Doğrula:</b> hedef URL şema (yalnızca <code class="inl">http/https</code>), uzunluk, ve <b>open-redirect/SSRF allowlist</b> kontrolünden geçer (§08).</li>
+<li><b>Alias?</b> Custom alias verildiyse: rezerve/blocklist/biçim kontrolü → DB unique kısıt.</li>
+<li><b>ID üret:</b> alias yoksa DB sequence → Feistel → Base62.</li>
+<li><b>Persist:</b> SQL Server'a yaz (kaynak doğrusu).</li>
+<li><b>Cache warm:</b> yeni link Redis'e yazılır → read-your-write tutarlılığı (link anında çalışır).</li>
+<li><b>Dön:</b> <code class="inl">201 Created</code> + kısa link.</li>
+</ol>
+
+<div class="call design">
+  <div class="ct">◆ İdempotency (opsiyonel ama önerilen)</div>
+  <p>Çağıran servis bir <code class="inl">Idempotency-Key</code> gönderirse, aynı anahtarla gelen tekrar istekleri aynı kısa linki döndürür — ağ retry'ları yüzünden aynı URL için onlarca farklı link oluşmasını önler. DMS API'deki idempotency pipeline behavior'ı birebir yeniden kullanılabilir.</p>
+</div>
+</section>
+
+<!-- ============ 7. CACHING KARARI ============ -->
+<section class="doc" id="caching">
+<h2 class="s"><span class="num">07 ⭐</span> Caching Kararı — Varnish vs Redis</h2>
+<p class="lead">Director'ın doğrudan sorduğu soru: <b>"Varnish gerekir mi, API seviyesinde Redis mi uygun olur?"</b> Kısa cevap: <b>MVP için Redis yeterli, Varnish gereksiz.</b> Gerekçesi aşağıda.</p>
+
+<h3 class="ss">İki aracın doğası farklı</h3>
+<table>
+<thead><tr><th></th><th>Redis</th><th>Varnish</th></tr></thead>
+<tbody>
+<tr><td>Ne</td><td>Bellek-içi veri deposu (key-value)</td><td>HTTP reverse-proxy cache</td></tr>
+<tr><td>Cache'lediği</td><td>id/alias → hedef eşlemesi, sayaçlar</td><td>Tam HTTP yanıtları (status+header+body)</td></tr>
+<tr><td>Katman</td><td>Uygulama içi (API çağırır)</td><td>API'nin önünde (edge)</td></tr>
+<tr><td>Bizim için artısı</td><td>Atomik INCR sayaç, TTL, durum kontrolü</td><td>API'ye hiç ulaşmadan yanıt</td></tr>
+<tr><td>Bizim için eksisi</td><td>Yine de API pod'u çalışır</td><td>302+analitik ile çelişir; invalidation karmaşık</td></tr>
+</tbody>
+</table>
+
+<div class="call risk">
+  <div class="ct">⚠ Varnish neden bizim modelde ters teper</div>
+  <p>Varnish'in tüm değeri, yanıtı edge'de cache'leyip <b>API'yi atlamasıdır</b>. Ama bizim redirect yanıtımız <b>her tıklamada analitik üretmek zorunda</b> (302 + sayaç + event). Varnish yanıtı edge'de cache'lerse, tıklamalar API'ye ulaşmaz ve <b>analitiği kaybederiz</b> — tıpkı 301'in problemi gibi. Yani Varnish ya analitiği kırar ya da her isteği geçirmek zorunda kalır (bu durumda da bir faydası kalmaz). Üstüne: link iptal/güncellemede Varnish cache'ini invalidate etmek ekstra bir dağıtık problem ekler.</p>
+</div>
+
+<div class="call design">
+  <div class="ct">◆ Karar: API seviyesinde Redis</div>
+  <p>Redis bizim için doğru katman çünkü: <b>(1)</b> redirect lookup'ını mikrosaniyeye indirir, <b>(2)</b> atomik <code class="inl">INCR</code> ile analitiği kırmadan sayar, <b>(3)</b> TTL ile link expiration'ı doğal yönetir, <b>(4)</b> link güncelleme/iptalde tek bir key'i silmek invalidation için yeter. §02'deki yük profili (pik birkaç yüz RPS) zaten tek pod + Redis kapasitesinin çok altında; ekstra bir HTTP cache katmanı ölçülebilir kazanç sağlamadan operasyonel yük ekler.</p>
+</div>
+
+<h3 class="ss">Ne zaman Varnish/CDN devreye girer (Faz-2 eşikleri)</h3>
+<table>
+<thead><tr><th>Tetikleyici</th><th>Eşik</th><th>Aksiyon</th></tr></thead>
+<tbody>
+<tr><td>Sürekli yüksek RPS</td><td>&gt; ~10.000 RPS sürekli</td><td>Edge HTTP cache değerlendir</td></tr>
+<tr><td>Global gecikme</td><td>Yurt dışı kullanıcı + &gt;100 ms RTT</td><td>CDN/edge PoP (anycast)</td></tr>
+<tr><td>Analitik gereksinimi düşer</td><td>"Sadece yönlendir, sayma" kabul edilirse</td><td>301 + CDN en ucuz olur</td></tr>
+</tbody>
+</table>
+<p>Bu eşiklere ulaşılana dek Varnish/CDN <b>çözülmemiş bir problem için ödenmiş karmaşıklıktır</b>. Mimari, eklenmesini engellemez — yalnızca erteler.</p>
+</section>
+
+<!-- ============ 8. GÜVENLİK ============ -->
+<section class="doc" id="guvenlik">
+<h2 class="s"><span class="num">08 ⭐</span> Güvenlik — Enterprise Katmanlar</h2>
+<p class="lead">Bir URL kısaltıcı, doğası gereği <b>açık bir yönlendirme makinesidir</b> — yani kötüye kullanıma davetkârdır (oltalama, open-redirect, SSRF). Güvenlik tek bir kontrol değil, <b>katmanlı savunma</b> (defense-in-depth) ile sağlanır.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 780 250" width="780" height="250" font-family="-apple-system,Segoe UI,sans-serif">
+  <!-- concentric layers -->
+  <rect x="20" y="20" width="740" height="210" rx="12" fill="rgba(248,81,73,.05)" stroke="#f85149" stroke-width="1.5"/>
+  <text x="35" y="40" fill="#ff7b72" font-size="12" font-weight="700">1 · Edge / WAF — ModSecurity + OWASP CRS, TLS, IP throttle, geo-block</text>
+  <rect x="50" y="52" width="680" height="160" rx="11" fill="rgba(124,92,255,.05)" stroke="#7c5cff" stroke-width="1.5"/>
+  <text x="65" y="72" fill="#b9a6ff" font-size="12" font-weight="700">2 · Gateway — rate limit, create-auth (mTLS/API Key), request boyut limiti</text>
+  <rect x="80" y="84" width="620" height="110" rx="10" fill="rgba(79,156,245,.05)" stroke="#4f9cf5" stroke-width="1.5"/>
+  <text x="95" y="104" fill="#79c0ff" font-size="12" font-weight="700">3 · Uygulama — input validation, open-redirect & SSRF allowlist</text>
+  <rect x="110" y="116" width="560" height="62" rx="9" fill="rgba(63,185,80,.06)" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="125" y="136" fill="#56d364" font-size="12" font-weight="700">4 · Veri & Secret — en-az-yetki DB, secret manager, audit log</text>
+  <text x="390" y="162" fill="#9aa7b4" font-size="11" text-anchor="middle">Her katman bir öncekini varsaymaz; bağımsız doğrular.</text>
+</svg>
+</div>
+
+<h3 class="ss">WAF — Web Application Firewall</h3>
+<ul>
+<li><b>Konum:</b> Gateway'in <b>önünde</b> (NGINX Ingress + ModSecurity). Kötü amaçlı istek API'ye ulaşmadan, hatta gateway kaynağı harcamadan elenir.</li>
+<li><b>Kural seti:</b> OWASP Core Rule Set (CRS) — SQLi, XSS, RCE, path traversal, protocol anomalileri.</li>
+<li><b>L7 DDoS / bot:</b> IP başına istek throttling, anomali tespiti, gerekirse geo-match kuralları.</li>
+<li><b>Log → SIEM:</b> WAF logları merkezi SIEM'e (DMS'teki ELK hattı) akar; tehdit paterni tespiti.</li>
+</ul>
+
+<h3 class="ss">API Gateway</h3>
+<ul>
+<li><b>Rate limit:</b> create endpoint'i için sıkı (servis başına kota); redirect için gevşek ama IP-bazlı tavan (scraping önleme).</li>
+<li><b>Auth ayrımı:</b> redirect = anonim (herkese açık); create = service-to-service (mTLS veya API Key).</li>
+<li><b>Request boyutu:</b> create gövdesi için katı üst sınır (oversized payload reddi).</li>
+</ul>
+
+<h3 class="ss">Uygulama seviyesi — kritik kontroller</h3>
+<div class="call risk">
+  <div class="ct">⚠ Open Redirect — bu servisin #1 riski</div>
+  <p>Bir URL kısaltıcı tanımı gereği yönlendirir; saldırgan bunu <b>oltalama</b> için kullanmak ister (<code class="inl">abc.com/s/x</code> → kötü-site.com). Tam engellemek mümkün değildir (yönlendirme servisin işi) ama <b>azaltılır:</b> (1) hedef şema yalnızca <code class="inl">http/https</code>, (2) bilinen kötü-domain blocklist / threat-intel feed, (3) opsiyonel "çıkış uyarı sayfası" şüpheli hedeflerde, (4) hedef domain allowlist'i (kurumsal kapalı kullanım için en güçlü kontrol).</p>
+</div>
+<div class="call risk">
+  <div class="ct">⚠ SSRF — link önizleme yaparsak</div>
+  <p>İleride link önizleme (unfurl/meta çekme) eklenirse, kullanıcı verdiği URL'ye <b>sunucu istek atar</b> → saldırgan iç ağ adreslerini hedefleyebilir (<code class="inl">169.254.169.254</code> metadata, <code class="inl">10.x</code>, <code class="inl">localhost</code>). Savunma: özel/iç IP aralıklarını DNS çözümünden sonra reddet, allowlist, ayrı egress proxy. MVP'de önizleme yok → risk yüzeyi kapalı; not olarak işaretlenir.</p>
+</div>
+
+<h3 class="ss">OWASP Top 10 — kapsama matrisi</h3>
+<table>
+<thead><tr><th>Risk</th><th>Bizdeki karşılığı</th><th>Kontrol</th></tr></thead>
+<tbody>
+<tr><td>A01 Broken Access Control</td><td>Create endpoint yetkisiz çağrılması</td><td>Gateway auth (mTLS/API Key), en-az-yetki</td></tr>
+<tr><td>A03 Injection</td><td>alias/URL girdisi</td><td>Parametrize EF Core, biçim regex, WAF CRS</td></tr>
+<tr><td>A04 Insecure Design</td><td>Sıralı ID tahmini, open-redirect</td><td>Feistel obfuscation, allowlist, çıkış uyarısı</td></tr>
+<tr><td>A05 Misconfiguration</td><td>Açık debug, gevşek CORS</td><td>Sertleştirilmiş Helm values, minimal sürtünme</td></tr>
+<tr><td>A07 Auth Failures</td><td>Zayıf service auth</td><td>mTLS tercih, key rotasyonu</td></tr>
+<tr><td>A09 Logging/Monitoring</td><td>Tespit boşluğu</td><td>WAF→SIEM, audit log, metrik alarm</td></tr>
+<tr><td>A10 SSRF</td><td>(Faz-2 önizleme)</td><td>IP allowlist, egress proxy — MVP'de kapalı</td></tr>
+</tbody>
+</table>
+
+<h3 class="ss">Secret yönetimi</h3>
+<ul>
+<li>DB/Redis kimlikleri ve API key'ler kod/Helm değerinde <b>düz metin değil</b>; K8s Secret + (tercihen) harici secret manager.</li>
+<li>En-az-yetki: API'nin DB kullanıcısı yalnızca gerekli tablolara erişir; şema değişikliği yetkisi yok.</li>
+<li>Key rotasyonu prosedürü tanımlı; mTLS sertifikaları otomatik yenilenir.</li>
+</ul>
+</section>
+
+<!-- ============ 9. NETWORK & DEPLOYMENT ============ -->
+<section class="doc" id="network">
+<h2 class="s"><span class="num">09</span> Network & Deployment</h2>
+<p class="lead">On-prem Kubernetes, DMS API ile aynı küme. Helm chart, probe'lar, HPA, PDB ve NetworkPolicy DMS desenini yeniden kullanır — operasyon ekibi için tanıdık.</p>
+
+<h3 class="ss">Kubernetes topolojisi</h3>
+<table>
+<thead><tr><th>Kaynak</th><th>Ayar</th><th>Gerekçe</th></tr></thead>
+<tbody>
+<tr><td>Redirect Deployment</td><td>2–3 replica, HPA (CPU + RPS)</td><td>HA + ani tıklama dalgasında otomatik ölçek</td></tr>
+<tr><td>Create Deployment</td><td>2 replica</td><td>Seyrek yük; HA için 2</td></tr>
+<tr><td>Liveness/Readiness probe</td><td><code>/health/live</code>, <code>/health/ready</code></td><td>Redis/SQL hazır değilse trafik alma</td></tr>
+<tr><td>PodDisruptionBudget</td><td>minAvailable: 1</td><td>Rolling/maintenance'ta kesintisizlik</td></tr>
+<tr><td>NetworkPolicy</td><td>API → yalnız Redis+SQL+kuyruk</td><td>Yanal hareketi (lateral movement) sınırla</td></tr>
+<tr><td>Ingress</td><td>NGINX + ModSecurity + TLS</td><td>Tek giriş noktası, WAF burada</td></tr>
+<tr><td>Resource limits</td><td>request/limit tanımlı</td><td>Noisy-neighbor ve OOM koruması</td></tr>
+</tbody>
+</table>
+
+<div class="call code">
+  <div class="ct">▸ Redis & SQL yerleşimi</div>
+  <p><b>Redis:</b> HA için en az primary+replica (Sentinel) veya managed. Cache düşse bile sistem SQL'den çalışmaya devam eder (graceful degradation), ama HA önerilir. <b>SQL Server:</b> kaynak doğrusu olduğundan yedekli (AlwaysOn/replica) + düzenli backup zorunlu — link kaybı kabul edilemez.</p>
+</div>
+
+<h3 class="ss">Failure modları & dayanıklılık</h3>
+<table>
+<thead><tr><th>Arıza</th><th>Etki</th><th>Davranış</th></tr></thead>
+<tbody>
+<tr><td>Redis düşer</td><td>Cache yok</td><td>SQL'den oku (yavaşlar ama çalışır); cache geri gelince ısınır</td></tr>
+<tr><td>SQL düşer</td><td>Yeni link yok, miss çözülemez</td><td>Cache hit'ler çalışmaya devam; create 503</td></tr>
+<tr><td>Analitik kuyruk düşer</td><td>Tıklama sayımı durur</td><td>Redirect <b>etkilenmez</b> (fire-and-forget)</td></tr>
+<tr><td>1 API pod düşer</td><td>—</td><td>PDB + replica ile kesintisiz</td></tr>
+</tbody>
+</table>
+</section>
+
+<!-- ============ 10. VERİ MODELİ ============ -->
+<section class="doc" id="veri-modeli">
+<h2 class="s"><span class="num">10</span> Veri Modeli</h2>
+<p class="lead">İki katman: SQL Server kaynak doğrusunu, Redis sıcak yolu tutar. Şema bilinçle minimaldir — MVP'nin ihtiyacı kadar.</p>
+
+<h3 class="ss">SQL Server — kaynak doğrusu</h3>
+<pre><span class="lang">SQL</span><code><span class="tok-kw">CREATE TABLE</span> Links (
+  Id            <span class="tok-typ">BIGINT</span>      <span class="tok-kw">IDENTITY PRIMARY KEY</span>,  <span class="tok-com">-- sequence kaynağı</span>
+  ShortCode     <span class="tok-typ">VARCHAR</span>(16) <span class="tok-kw">NOT NULL UNIQUE</span>,       <span class="tok-com">-- Base62 (üretilen) ya da alias</span>
+  IsCustomAlias <span class="tok-typ">BIT</span>         <span class="tok-kw">NOT NULL DEFAULT</span> 0,
+  TargetUrl     <span class="tok-typ">NVARCHAR</span>(2048) <span class="tok-kw">NOT NULL</span>,
+  Status        <span class="tok-typ">TINYINT</span>     <span class="tok-kw">NOT NULL DEFAULT</span> 1,    <span class="tok-com">-- 1=aktif 2=pasif 3=expired</span>
+  CreatedAtUtc  <span class="tok-typ">DATETIME2</span>   <span class="tok-kw">NOT NULL DEFAULT</span> SYSUTCDATETIME(),
+  ExpiresAtUtc  <span class="tok-typ">DATETIME2</span>   <span class="tok-kw">NULL</span>,                    <span class="tok-com">-- TTL'li linkler için</span>
+  CreatedBy     <span class="tok-typ">VARCHAR</span>(64) <span class="tok-kw">NULL</span>                     <span class="tok-com">-- çağıran servis kimliği</span>
+);
+<span class="tok-kw">CREATE INDEX</span> IX_Links_Expires <span class="tok-kw">ON</span> Links(ExpiresAtUtc) <span class="tok-kw">WHERE</span> ExpiresAtUtc <span class="tok-kw">IS NOT NULL</span>;</code></pre>
+
+<h3 class="ss">Redis — sıcak yol anahtarları</h3>
+<table>
+<thead><tr><th>Anahtar</th><th>Tip</th><th>İçerik</th><th>TTL</th></tr></thead>
+<tbody>
+<tr><td><code>link:{code}</code></td><td>String/Hash</td><td>hedef URL + status</td><td>link TTL'i ya da sabit (örn. 24s) + miss-fill</td></tr>
+<tr><td><code>clicks:{code}</code></td><td>Counter</td><td>toplam tıklama (INCR)</td><td>periyodik SQL'e flush</td></tr>
+</tbody>
+</table>
+
+<div class="call design">
+  <div class="ct">◆ TTL & expiration stratejisi</div>
+  <p>Kampanya linkleri <code class="inl">ExpiresAtUtc</code> ile süreli. İki seviye: (1) Redis key TTL'i ile sıcak yoldan otomatik düşer, (2) bir <b>arka plan purge job'u</b> süresi geçmiş kayıtları SQL'de pasifleştirir/temizler. Expire linke tıklanırsa <code class="inl">410 Gone</code> + opsiyonel bilgilendirme sayfası.</p>
+</div>
+</section>
+
+<!-- ============ 11. GÖZLEMLENEBİLİRLİK ============ -->
+<section class="doc" id="gozlemlenebilirlik">
+<h2 class="s"><span class="num">11</span> Gözlemlenebilirlik</h2>
+<p class="lead">DMS hattıyla aynı: Serilog → ELK, Prometheus metrikleri, sağlık probe'ları. Kampanya anında "link çalışıyor mu, ne kadar tıklandı" sorusuna saniyeler içinde yanıt.</p>
+
+<h3 class="ss">Metrikler & SLO</h3>
+<table>
+<thead><tr><th>Metrik</th><th>Neden</th><th>Alarm eşiği</th></tr></thead>
+<tbody>
+<tr><td>redirect p99 latency</td><td>Kullanıcı deneyimi</td><td>&gt; 50 ms</td></tr>
+<tr><td>cache hit ratio</td><td>Redis sağlığı</td><td>&lt; %90</td></tr>
+<tr><td>redirect 5xx oranı</td><td>Erişilebilirlik</td><td>&gt; %0.1</td></tr>
+<tr><td>404 (bilinmeyen kod) oranı</td><td>Scraping/scan tespiti</td><td>ani artış</td></tr>
+<tr><td>create hata oranı</td><td>Doğrulama/SQL sağlığı</td><td>&gt; %1</td></tr>
+<tr><td>analitik kuyruk gecikmesi</td><td>Sayım tazeliği</td><td>&gt; 60 sn lag</td></tr>
+</tbody>
+</table>
+
+<div class="call code">
+  <div class="ct">▸ Loglarda asla olmaması gerekenler</div>
+  <p>API key/secret, tam hedef URL'lerde gömülü token'lar (query string), kişisel veri. Tıklama event'lerinde IP ham değil hash/anonimize; coğrafya ülke/şehir seviyesinde tutulur (KVKK/GDPR uyumu).</p>
+</div>
+</section>
+
+<!-- ============ 12. ÖLÇEKLENME ============ -->
+<section class="doc" id="olcekleme">
+<h2 class="s"><span class="num">12</span> Ölçeklenme Yol Haritası</h2>
+<p class="lead">MVP bilinçle sade. Büyüme gelirse mimari <b>aşamalı</b> büyür — her adım bir önceki kararı bozmadan eklenir.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 780 200" width="780" height="200" font-family="-apple-system,Segoe UI,sans-serif">
+  <defs><marker id="ar6" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+    <path d="M0,0 L7,3.2 L0,6.4 Z" fill="#4f9cf5"/></marker></defs>
+  <rect x="20" y="70" width="200" height="70" rx="10" fill="#1c232c" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="120" y="95" fill="#56d364" font-size="13" font-weight="700" text-anchor="middle">MVP (bugün)</text>
+  <text x="120" y="114" fill="#9aa7b4" font-size="10.5" text-anchor="middle">SQL + Redis + 2-3 pod</text>
+  <text x="120" y="128" fill="#9aa7b4" font-size="10.5" text-anchor="middle">~birkaç yüz RPS pik</text>
+
+  <rect x="290" y="70" width="200" height="70" rx="10" fill="#1c232c" stroke="#d29922" stroke-width="1.5"/>
+  <text x="390" y="95" fill="#e3b341" font-size="13" font-weight="700" text-anchor="middle">Faz-2 (büyüme)</text>
+  <text x="390" y="114" fill="#9aa7b4" font-size="10.5" text-anchor="middle">HPA genişlet, Redis cluster</text>
+  <text x="390" y="128" fill="#9aa7b4" font-size="10.5" text-anchor="middle">read-replica SQL</text>
+
+  <rect x="560" y="70" width="200" height="70" rx="10" fill="#1c232c" stroke="#7c5cff" stroke-width="1.5"/>
+  <text x="660" y="95" fill="#b9a6ff" font-size="13" font-weight="700" text-anchor="middle">Faz-3 (hiper-ölçek)</text>
+  <text x="660" y="114" fill="#9aa7b4" font-size="10.5" text-anchor="middle">CDN/edge, çok-bölge</text>
+  <text x="660" y="128" fill="#9aa7b4" font-size="10.5" text-anchor="middle">&gt;10k RPS sürekli</text>
+
+  <line x1="220" y1="105" x2="288" y2="105" stroke="#4f9cf5" stroke-width="2" marker-end="url(#ar6)"/>
+  <line x1="490" y1="105" x2="558" y2="105" stroke="#4f9cf5" stroke-width="2" marker-end="url(#ar6)"/>
+  <text x="254" y="60" fill="#7d8896" font-size="10" text-anchor="middle">sürekli &gt;1k RPS</text>
+  <text x="524" y="60" fill="#7d8896" font-size="10" text-anchor="middle">global / &gt;10k RPS</text>
+</svg>
+</div>
+
+<div class="call swap">
+  <div class="ct">◇ Yönetici notu</div>
+  <p>MVP'yi "küçük" yapan eksiklik değil, <b>doğru ölçeklendirme</b>dir. Bugünkü trafik için hiper-ölçek altyapısı kurmak, kullanılmayan kapasiteye ödenen para + bakım yüküdür. Mimari büyümeye <b>hazır</b> (stateless pod'lar, cache soyutlaması, CQRS ayrımı) ama bu kapasiteyi <b>ihtiyaç anında</b> açar.</p>
+</div>
+</section>
+
+<!-- ============ 13. RİSKLER & KARARLAR ============ -->
+<section class="doc" id="riskler">
+<h2 class="s"><span class="num">13</span> Riskler & Kararlar</h2>
+
+<h3 class="ss">Tasarım kararları özeti</h3>
+<table>
+<thead><tr><th>Karar</th><th>Seçim</th><th>Alternatif & neden hayır</th></tr></thead>
+<tbody>
+<tr><td>ID üretimi</td><td>DB sequence → Feistel → Base62</td><td>Rastgele/hash: çakışma + retry karmaşıklığı</td></tr>
+<tr><td>Redirect tipi</td><td>302 + async analitik</td><td>301: tıklama ölçülemez, iptal edilemez</td></tr>
+<tr><td>Cache</td><td>API seviyesinde Redis</td><td>Varnish: analitiği kırar, invalidation karmaşık</td></tr>
+<tr><td>Tutarlılık</td><td>SQL kaynak, Redis cache</td><td>Redis-only: kalıcılık riski</td></tr>
+<tr><td>Auth</td><td>create=mTLS/key, redirect=anonim</td><td>Her şeye auth: redirect herkese açık olmalı</td></tr>
+<tr><td>Scope</td><td>Single-tenant MVP</td><td>Multi-tenant: erken karmaşıklık</td></tr>
+</tbody>
+</table>
+
+<h3 class="ss">Açık riskler & azaltma</h3>
+<table>
+<thead><tr><th>Risk</th><th>Olasılık/Etki</th><th>Azaltma</th></tr></thead>
+<tbody>
+<tr><td>Open-redirect ile oltalama</td><td>Orta / Yüksek</td><td>Şema kısıtı, blocklist, hedef allowlist, çıkış uyarısı</td></tr>
+<tr><td>Link scraping/enumeration</td><td>Orta / Orta</td><td>Feistel (sırasız), IP rate limit, 404 alarmı</td></tr>
+<tr><td>Redis kaybı → SQL yükü</td><td>Düşük / Orta</td><td>Redis HA, miss-fill, SQL read-replica (Faz-2)</td></tr>
+<tr><td>Patolojik tıklama dalgası</td><td>Düşük / Düşük</td><td>HPA, stateless pod; tek pod zaten 3k RPS karşılar</td></tr>
+<tr><td>Analitik veri kaybı</td><td>Orta / Düşük</td><td>Kuyruk dayanıklılığı; redirect etkilenmez</td></tr>
+</tbody>
+</table>
+
+<div class="call design">
+  <div class="ct">◆ Director için tek cümlelik özet</div>
+  <p>İş yükü gerçekte düşük-hacimli ve patlamalı olduğundan, <b>sade ve doğru ölçeklenen</b> bir mimari (SQL + Redis + 2-3 .NET pod, OWASP WAF arkasında) hem maliyeti düşük tutar hem de büyümeye hazırdır; Varnish/CDN gibi katmanlar net eşikler aşılınca eklenmek üzere bilinçle ertelenmiştir.</p>
+</div>
+</section>
+
+<!-- ============ 14. SÖZLÜK ============ -->
+<section class="doc" id="sozluk">
+<h2 class="s"><span class="num">14</span> Sözlük</h2>
+<table>
+<thead><tr><th>Terim</th><th>Açıklama</th></tr></thead>
+<tbody>
+<tr><td>Base62</td><td><code>0-9 a-z A-Z</code> (62 karakter) ile sayıyı kısa, URL-güvenli metne kodlama.</td></tr>
+<tr><td>Feistel cipher</td><td>Tam tersine çevrilebilir, çakışmasız ama sırayı gizleyen hafif şifreleme; sıralı ID tahminini önler.</td></tr>
+<tr><td>302 / 301</td><td>HTTP yönlendirme: 302 geçici (her tık sunucuya gelir), 301 kalıcı (cache'lenir, sunucuya gelmez).</td></tr>
+<tr><td>RPS</td><td>Requests Per Second — saniyedeki istek sayısı; kapasite planlamasının temel birimi.</td></tr>
+<tr><td>WAF</td><td>Web Application Firewall — L7'de kötü amaçlı istekleri eleyen güvenlik katmanı.</td></tr>
+<tr><td>OWASP CRS</td><td>WAF için hazır, topluluk-bakımlı saldırı imza kural seti.</td></tr>
+<tr><td>Open Redirect</td><td>Yönlendirme servisinin kötü bir hedefe yönlendirmek için kötüye kullanılması (oltalama vektörü).</td></tr>
+<tr><td>SSRF</td><td>Server-Side Request Forgery — sunucuyu iç ağ adreslerine istek atmaya kandırma.</td></tr>
+<tr><td>CQRS</td><td>Command Query Responsibility Segregation — okuma ve yazma yollarını ayırma deseni.</td></tr>
+<tr><td>HPA / PDB</td><td>K8s: otomatik yatay ölçekleme / kesintisizlik bütçesi.</td></tr>
+<tr><td>TTL</td><td>Time To Live — bir kaydın/cache anahtarının geçerlilik süresi.</td></tr>
+<tr><td>read-your-write</td><td>Yazdıktan hemen sonra okuyabilme garantisi (yeni link anında çalışır).</td></tr>
+</tbody>
+</table>
+<hr class="div">
+<p style="color:var(--muted);font-size:12.5px">TinyURL Servisi — Mimari & Karar Dokümanı · MVP · On-prem Kubernetes (DMS hattı) · Tek dosya, offline, CDN'siz.</p>
+</section>
+
+</main>
+</div>
+<button id="totop" style="position:fixed;right:22px;bottom:22px;z-index:40;display:none;
+  background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:10px;
+  padding:9px 13px;cursor:pointer;font-size:13px">↑ Başa dön</button>
+<style>#totop.show{display:block}</style>
+<script>
+(function(){
+  "use strict";
+  var GROUPS = [
+    {name:"Genel Bakış",            ids:["ozet","gereksinimler"]},
+    {name:"Tasarım",                ids:["kisa-url","mimari"]},
+    {name:"Akışlar & Cache",        ids:["redirect-yolu","create-yolu","caching"]},
+    {name:"Güvenlik & Network",     ids:["guvenlik","network"]},
+    {name:"Veri & Operasyon",       ids:["veri-modeli","gozlemlenebilirlik","olcekleme"]},
+    {name:"Karar & Referans",       ids:["riskler","sozluk"]}
+  ];
+  function titleOf(id){
+    var sec = document.getElementById(id);
+    if(!sec) return id;
+    var h = sec.querySelector("h2.s");
+    if(!h) return id;
+    var clone = h.cloneNode(true);
+    var num = clone.querySelector(".num");
+    if(num) num.remove();
+    return clone.textContent.replace(/\s+/g," ").trim();
+  }
+  var toc = document.getElementById("toc");
+  var linkById = {};
+  GROUPS.forEach(function(g){
+    var present = g.ids.filter(function(id){ return document.getElementById(id); });
+    if(!present.length) return;
+    var grp = document.createElement("div"); grp.className = "grp";
+    var gh = document.createElement("div"); gh.className = "gh";
+    gh.innerHTML = '<span class="tw">▾</span><span>'+g.name+'</span>';
+    var items = document.createElement("div"); items.className = "items";
+    present.forEach(function(id){
+      var t = titleOf(id);
+      var star = false;
+      if(t.charAt(0) === "⭐"){ star = true; t = t.replace(/^⭐\s*/,""); }
+      var a = document.createElement("a");
+      a.href = "#"+id; a.dataset.target = id;
+      a.innerHTML = (star ? '<span class="star">⭐</span> ' : "") + t;
+      items.appendChild(a); linkById[id] = a;
+    });
+    gh.addEventListener("click", function(){ grp.classList.toggle("collapsed"); });
+    grp.appendChild(gh); grp.appendChild(items); toc.appendChild(grp);
+  });
+  var sections = GROUPS.reduce(function(acc,g){
+    g.ids.forEach(function(id){ var s=document.getElementById(id); if(s) acc.push(s); });
+    return acc;
+  }, []);
+  var prog = document.getElementById("prog");
+  var totop = document.getElementById("totop");
+  function setActive(id){
+    Object.keys(linkById).forEach(function(k){ linkById[k].classList.remove("active"); });
+    if(linkById[id]){
+      linkById[id].classList.add("active");
+      var grp = linkById[id].closest(".grp");
+      if(grp) grp.classList.remove("collapsed");
+    }
+  }
+  if("IntersectionObserver" in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting) setActive(e.target.id); });
+    }, {rootMargin:"-12% 0px -78% 0px", threshold:0});
+    sections.forEach(function(s){ io.observe(s); });
+  }
+  function onScroll(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    var pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
+    if(prog) prog.style.width = pct.toFixed(1) + "%";
+    if(totop) totop.classList.toggle("show", h.scrollTop > 600);
+  }
+  window.addEventListener("scroll", onScroll, {passive:true});
+  onScroll();
+  if(totop) totop.addEventListener("click", function(){ window.scrollTo({top:0,behavior:"smooth"}); });
+  document.addEventListener("click", function(ev){
+    var ch = ev.target.closest(".collapse > .ch");
+    if(ch && ch.parentElement.classList.contains("collapse")){
+      ch.parentElement.classList.toggle("closed");
+    }
+  });
+  var filter = document.getElementById("tocfilter");
+  function norm(s){
+    return s.toLowerCase().replace(/ı/g,"i").replace(/ş/g,"s").replace(/ğ/g,"g")
+      .replace(/ü/g,"u").replace(/ö/g,"o").replace(/ç/g,"c");
+  }
+  if(filter){
+    filter.addEventListener("input", function(){
+      var q = norm(filter.value.trim());
+      toc.querySelectorAll(".grp").forEach(function(grp){
+        var any = false;
+        grp.querySelectorAll(".items a").forEach(function(a){
+          var hit = !q || norm(a.textContent).indexOf(q) !== -1;
+          a.classList.toggle("nohit", !hit);
+          if(hit) any = true;
+        });
+        grp.classList.toggle("nofilter", !!q && !any);
+        if(q && any) grp.classList.remove("collapsed");
+      });
+    });
+    filter.addEventListener("keydown", function(e){
+      if(e.key === "Escape"){ filter.value = ""; filter.dispatchEvent(new Event("input")); }
+    });
+  }
+  if(location.hash){
+    var t = document.getElementById(location.hash.slice(1));
+    if(t) setTimeout(function(){ t.scrollIntoView(); }, 30);
+  }
+})();
+</script>
+</body>
+</html>
